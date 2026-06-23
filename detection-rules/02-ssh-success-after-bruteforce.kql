@@ -1,0 +1,33 @@
+// Rule: Successful SSH Login After Brute Force
+// Severity: High
+// MITRE Tactic: Initial Access
+// MITRE Technique: T1078 - Valid Accounts
+// Description: Correlates failed SSH attempts with a successful login from the
+//              same IP within 30 minutes. Indicates potential compromise after
+//              credential guessing.
+// Run every: 5 minutes | Lookup last: 30 minutes
+
+let BruteIPs = Syslog
+    | where Facility == "auth"
+        and SyslogMessage has "Failed password"
+        and TimeGenerated > ago(30m)
+    | extend SourceIP = extract(@"from\s+(\d+\.\d+\.\d+\.\d+)", 1, SyslogMessage)
+    | summarize FailCount = count() by SourceIP
+    | where FailCount >= 3
+    | project SourceIP;
+
+Syslog
+| where Facility == "auth"
+    and SyslogMessage has "Accepted password"
+    and TimeGenerated > ago(30m)
+| extend
+    SourceIP = extract(@"from\s+(\d+\.\d+\.\d+\.\d+)", 1, SyslogMessage),
+    AuthUser = extract(@"for\s+(\S+)\s+from", 1, SyslogMessage)
+| join kind=inner BruteIPs on SourceIP
+| project
+    TimeGenerated,
+    SourceIP,
+    AuthUser,
+    Computer,
+    Alert = "CRITICAL: SSH success after brute force",
+    MITRETechnique = "T1078 - Valid Accounts"
