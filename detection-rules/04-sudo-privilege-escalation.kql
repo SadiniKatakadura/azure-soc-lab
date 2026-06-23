@@ -1,0 +1,23 @@
+// Rule: Sudo Privilege Escalation
+// Severity: High
+// MITRE Tactic: Privilege Escalation
+// MITRE Technique: T1548.003 - Abuse Elevation Control: Sudo
+// Description: Tracks sudo command execution by non-standard users.
+//              Detects attackers escalating from low-privilege shell to root.
+// Run every: 5 minutes | Lookup last: 5 minutes
+
+Syslog
+| where ProcessName == "sudo"
+    and SyslogMessage has "COMMAND"
+| extend
+    RunBy = extract(@"^(\S+)\s*:", 1, SyslogMessage),
+    Command = extract(@"COMMAND=(.*)", 1, SyslogMessage),
+    WorkDir = extract(@"PWD=(\S+)", 1, SyslogMessage)
+| where RunBy !in ("root", "socadmin")
+| project
+    TimeGenerated,
+    Computer,
+    RunBy,
+    Command,
+    WorkDir,
+    MITRETechnique = "T1548.003 - Sudo Abuse"
