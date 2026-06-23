@@ -113,7 +113,22 @@ Microsoft Sentinel generated the following incidents from the detection rules:
 | 1 | SSH Brute Force Detection | High | Active |
 | 2 | Sudo Privilege Escalation | High | Active |
 
-Screenshots of incidents, analytics rules, and data flow are in [`/screenshots`](./screenshots/).
+## Screenshots
+
+**5 Active Detection Rules in Microsoft Sentinel:**
+![Analytics Rules](./screenshots/01-sentinel-analytics-rules.png)
+
+**Live Incidents — SSH Brute Force and Sudo Privilege Escalation:**
+![Incidents Dashboard](./screenshots/02-incidents-dashboard.png)
+
+**SSH Brute Force Incident Detail:**
+![Incident Detail](./screenshots/03-ssh-bruteforce-incident-detail.png)
+
+**Live Syslog Data Flowing from soc-honeypot:**
+![Syslog KQL Results](./screenshots/04-syslog-kql-results.png)
+
+**Azure Arc — VM Connected and Monitoring Installed:**
+![Azure Arc Connected](./screenshots/05-azure-arc-connected.png)
 
 ---
 
