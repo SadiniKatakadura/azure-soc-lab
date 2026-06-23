@@ -1,0 +1,21 @@
+// Rule: New Local User Account Created
+// Severity: High
+// MITRE Tactic: Persistence
+// MITRE Technique: T1136.001 - Create Account: Local Account
+// Description: Fires whenever a new user account is created via useradd.
+//              Common attacker technique to establish persistent backdoor access.
+// Run every: 5 minutes | Lookup last: 5 minutes
+
+Syslog
+| where SyslogMessage has_any ("new user", "useradd", "new account")
+    and Facility == "auth"
+| extend
+    NewUsername = extract(@"name=(\w+)", 1, SyslogMessage),
+    NewUID = extract(@"UID=(\d+)", 1, SyslogMessage)
+| project
+    TimeGenerated,
+    Computer,
+    NewUsername,
+    NewUID,
+    RawMessage = SyslogMessage,
+    MITRETechnique = "T1136.001 - Create Local Account"
