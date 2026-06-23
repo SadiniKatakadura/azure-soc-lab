@@ -1,0 +1,29 @@
+// Rule: SSH Brute Force Detection
+// Severity: High
+// MITRE Tactic: Credential Access
+// MITRE Technique: T1110.001 - Brute Force: Password Guessing
+// Description: Detects when a single source IP generates 5 or more failed SSH
+//              authentication attempts within a 5-minute window.
+// Run every: 5 minutes | Lookup last: 5 minutes
+
+Syslog
+| where Facility == "auth"
+    and SyslogMessage has_any ("Failed password", "Failed publickey", "Invalid user")
+    and TimeGenerated > ago(5m)
+| extend
+    SourceIP = extract(@"from\s+(\d+\.\d+\.\d+\.\d+)", 1, SyslogMessage),
+    TargetUser = extract(@"(?:user|for)\s+(\S+)\s+from", 1, SyslogMessage)
+| where isnotempty(SourceIP)
+| summarize
+    FailedAttempts = count(),
+    FirstAttempt = min(TimeGenerated),
+    LastAttempt = max(TimeGenerated),
+    TriedUsers = make_set(TargetUser)
+    by SourceIP, Computer
+| where FailedAttempts >= 5
+| extend
+    AttackDuration_sec = datetime_diff('second', LastAttempt, FirstAttempt),
+    MITRETechnique = "T1110.001 - Brute Force: Password Guessing"
+| project SourceIP, Computer, FailedAttempts, AttackDuration_sec,
+          TriedUsers, FirstAttempt, LastAttempt, MITRETechnique
+| order by FailedAttempts desc
