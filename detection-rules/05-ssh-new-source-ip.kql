@@ -1,0 +1,31 @@
+// Rule: SSH Login from New Source IP
+// Severity: High
+// MITRE Tactic: Initial Access
+// MITRE Technique: T1078 - Valid Accounts
+// Description: Anomaly-based detection. Flags successful SSH logins from IP
+//              addresses not seen in the previous 7 days. Identifies first-time
+//              access from unknown sources.
+// Run every: 1 hour | Lookup last: 1 hour
+
+let KnownIPs = Syslog
+    | where TimeGenerated > ago(7d)
+        and SyslogMessage has "Accepted password"
+    | extend IP = extract(@"from\s+(\d+\.\d+\.\d+\.\d+)", 1, SyslogMessage)
+    | summarize by IP
+    | project IP;
+
+Syslog
+| where TimeGenerated > ago(1h)
+    and SyslogMessage has "Accepted password"
+    and Facility == "auth"
+| extend
+    SourceIP = extract(@"from\s+(\d+\.\d+\.\d+\.\d+)", 1, SyslogMessage),
+    AuthUser = extract(@"for\s+(\S+)\s+from", 1, SyslogMessage)
+| join kind=leftanti KnownIPs on $left.SourceIP == $right.IP
+| project
+    TimeGenerated,
+    SourceIP,
+    AuthUser,
+    Computer,
+    AnomalyType = "First-time source IP",
+    MITRETechnique = "T1078 - Valid Accounts"
